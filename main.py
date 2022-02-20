@@ -4,32 +4,65 @@ import os.path
 from datetime import datetime
 import feedparser
 import sqlite3
+import gotify
 import configparser
 
 
 def config_check():
-    global domain, meow_uploader
+    global domain, meow_uploader, gotify_url, gotify_token, gotify_title, gotify_priority
     print("Checking for config...")
     config = configparser.ConfigParser()
-    if os.path.isfile("config.yml"):
+    if not os.path.isdir("app"):
+        os.mkdir("app")
+    if os.path.isfile("app/config.yml"):
         print("Found config.yml.")
-        config.read("config.yml")
+        config.read("app/config.yml")
         try:
-            meow_uploader = config["CommentWatcher"]["user"]
+            meow_uploader = config["CommentsWatcher"]["user"]
         except:
-            config["CommentWatcher"]["user"] = "<INSERT MEOW-USERNAME>"
-            with open("config.yml", 'w') as configfile:
+            config["CommentsWatcher"] = {}
+            config["CommentsWatcher"]["user"] = "<INSERT MEOW-USERNAME>"
+            with open("app/config.yml", 'w') as configfile:
                 config.write(configfile)
             print("Please edit config.yml and restart the script.")
             exit()
         try:
-            domain = config["CommentWatcher"]["url"]
+            domain = config["CommentsWatcher"]["url"]
         except:
-            config["CommentWatcher"]["url"] = "<INSERT URL LIKE 'https://meow.com/?page=rss&u='>"
-            with open("config.yml", 'w') as configfile:
+            config["CommentsWatcher"]["url"] = "<INSERT URL LIKE 'https://meow.com/?page=rss&u='>"
+            with open("app/config.yml", 'w') as configfile:
                 config.write(configfile)
             print("Please edit config.yml and restart the script.")
             exit()
+        try:
+            gotify_url = config["Gotify"]["url"]
+        except:
+            config["Gotify"] = {}
+            config["Gotify"]["url"] = "<INSERT GOTIFY-URL HERE>"
+            with open("app/config.yml", 'w') as configfile:
+                config.write(configfile)
+            print("Please set a valid gotify url in config.yml and restart the script.")
+            exit()
+        try:
+            gotify_token = config["Gotify"]["token"]
+        except:
+            config["Gotify"]["token"] = "<INSERT GOTIFY-TOKEN HERE>"
+            with open("app/config.yml", 'w') as configfile:
+                config.write(configfile)
+            print("Please set a valid gotify token in config.yml and restart the script.")
+            exit()
+        try:
+            gotify_priority = config["Gotify"]["priority"]
+            if gotify_priority == "<PRIORITY OF MESSAGE (0-15)>":
+                gotify_priority = 15
+        except:
+            gotify_priority = 15
+        try:
+            gotify_title = config["Gotify"]["notification_title"]
+            if gotify_title == "<INSERT NOTIFICATION TITLE HERE>":
+                gotify_title = "Nyaa-CommentsWatcher"
+        except:
+            gotify_title = "Nyaa-CommentsWatcher"
         if meow_uploader != "<INSERT MEOW-USERNAME>" and meow_uploader != "":
             print("Watching comments of the following user: \"{}\".".format(meow_uploader))
         else:
@@ -41,10 +74,15 @@ def config_check():
             print("Please edit the 'url' setting in config.yml!")
             exit()
     else:
-        config["CommentWatcher"] = {}
-        config["CommentWatcher"]["url"] = "<INSERT URL LIKE 'https://meow.com/?page=rss&u='>"
-        config["CommentWatcher"]["user"] = "<INSERT MEOW-USERNAME>"
-        with open("config.yml", 'w') as configfile:
+        config["CommentsWatcher"] = {}
+        config["CommentsWatcher"]["url"] = "<INSERT URL LIKE 'https://meow.com/?page=rss&u='>"
+        config["CommentsWatcher"]["user"] = "<INSERT MEOW-USERNAME>"
+        config["Gotify"] = {}
+        config["Gotify"]["url"] = "<INSERT GOTIFY-URL HERE>"
+        config["Gotify"]["token"] = "<INSERT GOTIFY-TOKEN HERE>"
+        config["Gotify"]["notification_title"] = "<INSERT NOTIFICATION TITLE HERE>"
+        config["Gotify"]["priority"] = "<PRIORITY OF MESSAGE (0-15)>"
+        with open("app/config.yml", 'w') as configfile:
             config.write(configfile)
         print("Created config file.\nPlease edit config.yml and restart the script.")
         exit()
@@ -52,17 +90,11 @@ def config_check():
 
 def db_check():
     print("Checking for database...")
-    if os.path.isdir("db"):
-        if os.path.isfile("commentwatcher.db"):
-            print("Everything existent.")
-        else:
-            print("Creating database file.")
-            database = open("commentwatcher.db", 'x')
-            database.close()
+    if os.path.isfile("app/commentswatcher.db"):
+        print("Everything existent.")
     else:
-        print("Creating database...")
-        os.makedirs("db")
-        database = open("commentwatcher.db", 'x')
+        print("Creating database file.")
+        database = open("app/commentswatcher.db", 'x')
         database.close()
 
 
@@ -107,7 +139,7 @@ def parsing_inf(rss):
     # for x in link_list:
         # print("{} - {} - comments: {}".format(title_list[link_list.index(x)],
         #                                       x, comment_number_list[link_list.index(x)]))
-    connection = sqlite3.connect("commentwatcher.db")
+    connection = sqlite3.connect("app/commentswatcher.db")
     cursor = connection.cursor()
     createTable = '''CREATE TABLE if NOT exists UPLOADS(
     Title VARCHAR(100), Link VARCHAR(100), Comments int
@@ -121,23 +153,41 @@ def parsing_inf(rss):
         # print(type(db_result[0][2]), type(comment_number_list[x]))
         if db_result:
             if db_result[0][2] != comment_number_list[x]:
-                print("The following upload got {} new comments:\n {}".format(
+                print("The following release got {} new comments:\n {}".format(
                     comment_number_list[x] - db_result[0][2], title_list[x]))
                 cursor.execute('''UPDATE UPLOADS SET Comments = {} WHERE Link="{}";'''.format(
                     comment_number_list[x], link_list[x]))
+                # SENDING NOTIFICATIONS
+                gotify_send(comment_number_list[x] - db_result[0][2], title_list[x])
         else:
             print("Found new release")
             cursor.execute('''INSERT INTO UPLOADS VALUES ("{}", "{}", {})'''.format(
                 title_list[x], link_list[x], comment_number_list[x]))
     if not cursor:
         print("Fail :(")
+    else:
+        print("Checking again in 10 minutes.")
     connection.commit()
     connection.close()
+
+
+def gotify_send(comments, title):
+    gotify_server = gotify.gotify(
+        base_url=gotify_url,
+        app_token=gotify_token,
+    )
+    gotify_server.create_message(
+        "{} just received {} new comments.".format(title, comments),
+        title=gotify_title,
+        priority=gotify_priority,
+    )
+    return
 
 
 if __name__ == '__main__':
     config_check()
     db_check()
+    get_user_page()
     all_good = True
     schedule.every(10).minutes.do(get_user_page)
     while all_good:

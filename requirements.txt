@@ -1,0 +1,4 @@
+gotify
+configparser
+schedule
+feedparser
