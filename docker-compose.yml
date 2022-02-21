@@ -5,8 +5,5 @@ services:
     container_name: nyaa-commentswatcher
     # network_mode: container:wireguard
         # OPTIONAL: To hide your IP, you can use the network of a VPN container.
-    environment: # So you don't have to use sudo to edit the config file
-      - PUID=1000
-      - PGID=1000
     volumes:
        - ./app:/usr/src/app/app

@@ -24,7 +24,6 @@ $ git clone https://github.com/Vernoxvernax/Nyaa-CommentsWatcher.git
 ```
 
 Build the docker image:
-
 ```
 $ docker build -t depri/nyaa-commentswatcher .
 ```
@@ -61,9 +60,6 @@ services:
     container_name: nyaa-commentswatcher
     # network_mode: container:wireguard
         # OPTIONAL: To hide your IP, you can use the network of a VPN container.
-    environment: # Run "id" in your terminal and fill out these two variables.
-      - PUID=1000
-      - PGID=1000
     volumes:
        - ./app:/usr/src/app/app
 ```
