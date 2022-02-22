@@ -10,7 +10,7 @@ Sunday-project to receive notifications, if the amount of comments on a nyaa-rel
 ### Requirements:
 
 + git (for git clone)
-+ up and running gotify container and a app-token
++ up and running gotify container and an app-token
 + docker and docker-compose
 
 ---
