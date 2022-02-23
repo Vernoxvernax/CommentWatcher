@@ -1,14 +1,40 @@
 import time
 import schedule
 import os.path
-from datetime import datetime
 import feedparser
 import sqlite3
 import gotify
 import configparser
+from datetime import datetime
 
 
 def config_check():
+    def reading_settings(header, setting, template):
+        try:
+            variable = config[header][setting]
+            if variable == template:
+                print("Please change \"{}\" in app/config.yml.".format(setting))
+                exit()
+            else:
+                print("\"{}\" has been set to \"{}\"".format(setting, variable))
+            return variable
+        except:
+            if setting != "delay":
+                config[header][setting] = template
+            else:
+                config[header][setting] = "120"
+            with open("app/config.yml", 'w') as configfile:
+                config.write(configfile)
+            print("Please edit app/config.yml and restart the script.")
+            exit()
+
+    def header_check(header):
+        try:
+            config[header]
+        except:
+            config[header] = {}
+            with open("app/config.yml", 'w+') as configfile:
+                config.write(configfile)
     global domain, meow_uploader, gotify_url, gotify_token, gotify_title, gotify_priority
     print("Checking for config...")
     config = configparser.ConfigParser()
@@ -17,62 +43,16 @@ def config_check():
     if os.path.isfile("app/config.yml"):
         print("Found config.yml.")
         config.read("app/config.yml")
-        try:
-            meow_uploader = config["CommentsWatcher"]["user"]
-        except:
-            config["CommentsWatcher"] = {}
-            config["CommentsWatcher"]["user"] = "<INSERT MEOW-USERNAME>"
-            with open("app/config.yml", 'w') as configfile:
-                config.write(configfile)
-            print("Please edit config.yml and restart the script.")
-            exit()
-        try:
-            domain = config["CommentsWatcher"]["url"]
-        except:
-            config["CommentsWatcher"]["url"] = "<INSERT URL LIKE 'https://meow.com/?page=rss&u='>"
-            with open("app/config.yml", 'w') as configfile:
-                config.write(configfile)
-            print("Please edit config.yml and restart the script.")
-            exit()
-        try:
-            gotify_url = config["Gotify"]["url"]
-        except:
-            config["Gotify"] = {}
-            config["Gotify"]["url"] = "<INSERT GOTIFY-URL HERE>"
-            with open("app/config.yml", 'w') as configfile:
-                config.write(configfile)
-            print("Please set a valid gotify url in config.yml and restart the script.")
-            exit()
-        try:
-            gotify_token = config["Gotify"]["token"]
-        except:
-            config["Gotify"]["token"] = "<INSERT GOTIFY-TOKEN HERE>"
-            with open("app/config.yml", 'w') as configfile:
-                config.write(configfile)
-            print("Please set a valid gotify token in config.yml and restart the script.")
-            exit()
-        try:
-            gotify_priority = config["Gotify"]["priority"]
-            if gotify_priority == "<PRIORITY OF MESSAGE (0-15)>":
-                gotify_priority = 15
-        except:
-            gotify_priority = 15
-        try:
-            gotify_title = config["Gotify"]["notification_title"]
-            if gotify_title == "<INSERT NOTIFICATION TITLE HERE>":
-                gotify_title = "Nyaa-CommentsWatcher"
-        except:
-            gotify_title = "Nyaa-CommentsWatcher"
-        if meow_uploader != "<INSERT MEOW-USERNAME>" and meow_uploader != "":
-            print("Watching comments of the following user: \"{}\".".format(meow_uploader))
-        else:
-            print("Please edit the 'user' setting in config.yml!")
-            exit()
-        if domain != "<INSERT URL LIKE 'https://meow.com/?page=rss&u='>" and domain != "":
-            print("On the following site {}.".format(domain))
-        else:
-            print("Please edit the 'url' setting in config.yml!")
-            exit()
+        header_check("CommentsWatcher")
+        domain = reading_settings("CommentsWatcher", "url", "<INSERT URL LIKE 'https://meow.com/?page=rss&u='>")
+        meow_uploader = reading_settings("CommentsWatcher", "user", "<INSERT MEOW-USERNAME>")
+        header_check("Gotify")
+        gotify_url = reading_settings("Gotify", "gotify_url", "<INSERT GOTIFY-URL HERE>")
+        gotify_token = reading_settings("Gotify", "token", "<INSERT GOTIFY-TOKEN HERE>")
+        gotify_title = reading_settings("Gotify", "notification_title", "<INSERT NOTIFICATION TITLE HERE>")
+        gotify_priority = int(reading_settings("Gotify", "priority", "<PRIORITY OF MESSAGE (0-15)>"))
+        print("Settings have been successfully injected.")
+        input()
     else:
         config["CommentsWatcher"] = {}
         config["CommentsWatcher"]["url"] = "<INSERT URL LIKE 'https://meow.com/?page=rss&u='>"
