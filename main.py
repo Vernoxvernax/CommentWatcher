@@ -52,7 +52,6 @@ def config_check():
         gotify_title = reading_settings("Gotify", "notification_title", "<INSERT NOTIFICATION TITLE HERE>")
         gotify_priority = int(reading_settings("Gotify", "priority", "<PRIORITY OF MESSAGE (0-15)>"))
         print("Settings have been successfully injected.")
-        input()
     else:
         config["CommentsWatcher"] = {}
         config["CommentsWatcher"]["url"] = "<INSERT URL LIKE 'https://meow.com/?page=rss&u='>"
