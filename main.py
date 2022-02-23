@@ -58,7 +58,7 @@ def config_check():
         config["CommentsWatcher"]["url"] = "<INSERT URL LIKE 'https://meow.com/?page=rss&u='>"
         config["CommentsWatcher"]["user"] = "<INSERT MEOW-USERNAME>"
         config["Gotify"] = {}
-        config["Gotify"]["url"] = "<INSERT GOTIFY-URL HERE>"
+        config["Gotify"]["gotify_url"] = "<INSERT GOTIFY-URL HERE>"
         config["Gotify"]["token"] = "<INSERT GOTIFY-TOKEN HERE>"
         config["Gotify"]["notification_title"] = "<INSERT NOTIFICATION TITLE HERE>"
         config["Gotify"]["priority"] = "<PRIORITY OF MESSAGE (0-15)>"
