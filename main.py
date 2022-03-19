@@ -155,11 +155,18 @@ def gotify_send(comments, title):
         base_url=gotify_url,
         app_token=gotify_token,
     )
-    gotify_server.create_message(
-        "{} just received {} new comments.".format(title, comments),
-        title=gotify_title,
-        priority=gotify_priority,
-    )
+    if comments > 1:
+        gotify_server.create_message(
+            "{} just received {} new comments.".format(title, comments),
+            title=gotify_title,
+            priority=gotify_priority,
+        )
+    else:
+        gotify_server.create_message(
+            "{} just received {} new comment.".format(title, comments),
+            title=gotify_title,
+            priority=gotify_priority,
+        )
     return
 
 
